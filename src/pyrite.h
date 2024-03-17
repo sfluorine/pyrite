@@ -7,22 +7,28 @@
 
 typedef enum {
     INS_HALT,
-    INS_I32PUSH,
-    INS_I64PUSH,
+    INS_IPUSH,
     INS_DPUSH,
     INS_POP,
+    INS_PRINT,
+    INS_IADD,
+    INS_ISUB,
+    INS_IMUL,
+    INS_IDIV,
+    INS_DADD,
+    INS_DSUB,
+    INS_DMUL,
+    INS_DDIV,
 } PyriteInstruction;
 
 typedef enum {
-    PR_I32,
-    PR_I64,
+    PR_INT,
     PR_DOUBLE,
     PR_PTR,
 } PyriteValueType;
 
 typedef union {
-    int32_t as_i32;
-    int64_t as_i64;
+    int64_t as_int;
     double_t as_double;
     void* as_ptr;
 } PyriteValue;

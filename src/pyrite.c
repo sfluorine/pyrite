@@ -18,17 +18,11 @@ static Word fetch_word(VirtualMachine* vm, PyriteValueType type)
     word.type = type;
 
     switch (type) {
-    case PR_I32:
-        for (size_t i = 0; i < sizeof(int32_t); i++) {
-            buffer[i] = fetch(vm);
-        }
-        memcpy(&word.value.as_i32, buffer, sizeof(int32_t));
-        break;
-    case PR_I64:
+    case PR_INT:
         for (size_t i = 0; i < sizeof(int64_t); i++) {
             buffer[i] = fetch(vm);
         }
-        memcpy(&word.value.as_i64, buffer, sizeof(int64_t));
+        memcpy(&word.value.as_int, buffer, sizeof(int64_t));
         break;
     case PR_DOUBLE:
         for (size_t i = 0; i < sizeof(double_t); i++) {
@@ -61,6 +55,45 @@ static Word pop(VirtualMachine* vm)
     return vm->stack[vm->stack_pointer--];
 }
 
+static void print_word(Word word)
+{
+    switch (word.type) {
+    case PR_INT:
+        printf("%ld\n", word.value.as_int);
+        break;
+    case PR_DOUBLE:
+        printf("%lf\n", word.value.as_double);
+        break;
+    case PR_PTR:
+        printf("%p\n", word.value.as_ptr);
+        break;
+    }
+}
+
+#define arithop_int(OP)                                             \
+    {                                                               \
+        Word rhs = pop(vm);                                         \
+        Word lhs = pop(vm);                                         \
+        assert(lhs.type == PR_INT && rhs.type == PR_INT);           \
+        Word result;                                                \
+        result.type = PR_INT;                                       \
+        result.value.as_int = lhs.value.as_int OP rhs.value.as_int; \
+        push(vm, result);                                           \
+    }
+
+#define arithop_double(OP)                                                \
+    {                                                                     \
+        Word rhs = pop(vm);                                               \
+        Word lhs = pop(vm);                                               \
+        assert(lhs.type == PR_DOUBLE && rhs.type == PR_DOUBLE);           \
+        Word result;                                                      \
+        result.type = PR_DOUBLE;                                          \
+        result.value.as_int = lhs.value.as_double OP rhs.value.as_double; \
+        push(vm, result);                                                 \
+    }
+
+#define ARITHOP(TYPE, OP) arithop_##TYPE(OP)
+
 void vm_init(VirtualMachine* vm, uint8_t* program, uint32_t program_length)
 {
     vm->program = program;
@@ -79,17 +112,41 @@ void vm_execute(VirtualMachine* vm)
         case INS_HALT:
             halt = true;
             break;
-        case INS_I32PUSH:
-            push(vm, fetch_word(vm, PR_I32));
-            break;
-        case INS_I64PUSH:
-            push(vm, fetch_word(vm, PR_I64));
+        case INS_IPUSH:
+            push(vm, fetch_word(vm, PR_INT));
             break;
         case INS_DPUSH:
             push(vm, fetch_word(vm, PR_DOUBLE));
             break;
         case INS_POP:
             pop(vm);
+            break;
+        case INS_PRINT:
+            print_word(pop(vm));
+            break;
+        case INS_IADD:
+            ARITHOP(int, +);
+            break;
+        case INS_ISUB:
+            ARITHOP(int, -);
+            break;
+        case INS_IMUL:
+            ARITHOP(int, *);
+            break;
+        case INS_IDIV:
+            ARITHOP(int, /);
+            break;
+        case INS_DADD:
+            ARITHOP(double, +);
+            break;
+        case INS_DSUB:
+            ARITHOP(double, -);
+            break;
+        case INS_DMUL:
+            ARITHOP(double, *);
+            break;
+        case INS_DDIV:
+            ARITHOP(double, /);
             break;
         }
     }

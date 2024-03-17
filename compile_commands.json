@@ -2,17 +2,33 @@
   {
     "arguments": [
       "/usr/sbin/gcc",
-      "-std=gnu2x",
+      "-std=c2x",
       "-g",
       "-Wall",
       "-Wextra",
       "-c",
       "-o",
-      "main.o",
-      "src/main.c"
+      "build/pyrite/pyrite_main.o",
+      "src/pyrite_main.c"
     ],
     "directory": "/home/freedbytes/programming/pyrite",
-    "file": "/home/freedbytes/programming/pyrite/src/main.c",
-    "output": "/home/freedbytes/programming/pyrite/main.o"
+    "file": "/home/freedbytes/programming/pyrite/src/pyrite_main.c",
+    "output": "/home/freedbytes/programming/pyrite/build/pyrite/pyrite_main.o"
+  },
+  {
+    "arguments": [
+      "/usr/sbin/gcc",
+      "-std=c2x",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-c",
+      "-o",
+      "build/pyrite/pyrite.o",
+      "src/pyrite.c"
+    ],
+    "directory": "/home/freedbytes/programming/pyrite",
+    "file": "/home/freedbytes/programming/pyrite/src/pyrite.c",
+    "output": "/home/freedbytes/programming/pyrite/build/pyrite/pyrite.o"
   }
 ]

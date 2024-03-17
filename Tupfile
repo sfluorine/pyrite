@@ -1,2 +1,5 @@
-: foreach src/*.c |> gcc -std=gnu2x -g -Wall -Wextra -c %f -o %o |> %B.o
-: *.o |> gcc %f -o %o |> pyrite
+: foreach src/pyrite.c src/pyrite_main.c |> gcc -std=c2x -g -Wall -Wextra -c %f -o %o |> build/pyrite/%B.o
+: build/pyrite/*.o |> gcc %f -o %o |> pyrite
+
+: src/pyasm.c |> gcc -std=c2x -g -Wall -Wextra -c %f -o %o |> build/pyasm/%B.o
+: build/pyasm/*.o |> gcc %f -o %o |> pyasm
