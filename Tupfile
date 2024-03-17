@@ -1,2 +1,2 @@
-: foreach src/*.c |> clang -g -Wall -Wextra -c %f -o %o |> %B.o
-: *.o |> clang %f -o %o |> pyrite
+: foreach src/*.c |> gcc -std=gnu2x -g -Wall -Wextra -c %f -o %o |> %B.o
+: *.o |> gcc %f -o %o |> pyrite
