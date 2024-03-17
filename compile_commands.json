@@ -1,0 +1,18 @@
+[
+  {
+    "arguments": [
+      "/usr/sbin/gcc",
+      "-std=gnu2x",
+      "-g",
+      "-Wall",
+      "-Wextra",
+      "-c",
+      "-o",
+      "main.o",
+      "src/main.c"
+    ],
+    "directory": "/home/freedbytes/programming/pyrite",
+    "file": "/home/freedbytes/programming/pyrite/src/main.c",
+    "output": "/home/freedbytes/programming/pyrite/main.o"
+  }
+]
