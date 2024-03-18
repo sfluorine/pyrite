@@ -1,5 +1,7 @@
 .cache
 .tup
+build
+
 
 pyrite
-*.o
+pyasm

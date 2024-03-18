@@ -1,0 +1,4 @@
+ipush 34
+ipush 35
+iadd
+print
