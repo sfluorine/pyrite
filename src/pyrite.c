@@ -1,8 +1,10 @@
 #include "pyrite.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static uint8_t fetch(VirtualMachine* vm)
@@ -12,7 +14,7 @@ static uint8_t fetch(VirtualMachine* vm)
 
 static Word fetch_word(VirtualMachine* vm, PyriteValueType type)
 {
-    uint8_t buffer[sizeof(PyriteValue)];
+    uint8_t buffer[8];
 
     Word word;
     word.type = type;
@@ -81,15 +83,15 @@ static void print_word(Word word)
         push(vm, result);                                           \
     }
 
-#define arithop_double(OP)                                                \
-    {                                                                     \
-        Word rhs = pop(vm);                                               \
-        Word lhs = pop(vm);                                               \
-        assert(lhs.type == PR_DOUBLE && rhs.type == PR_DOUBLE);           \
-        Word result;                                                      \
-        result.type = PR_DOUBLE;                                          \
-        result.value.as_int = lhs.value.as_double OP rhs.value.as_double; \
-        push(vm, result);                                                 \
+#define arithop_double(OP)                                                   \
+    {                                                                        \
+        Word rhs = pop(vm);                                                  \
+        Word lhs = pop(vm);                                                  \
+        assert(lhs.type == PR_DOUBLE && rhs.type == PR_DOUBLE);              \
+        Word result;                                                         \
+        result.type = PR_DOUBLE;                                             \
+        result.value.as_double = lhs.value.as_double OP rhs.value.as_double; \
+        push(vm, result);                                                    \
     }
 
 #define ARITHOP(TYPE, OP) arithop_##TYPE(OP)
@@ -102,6 +104,45 @@ void vm_init(VirtualMachine* vm, uint8_t* program, uint32_t program_length)
 
     vm->stack_pointer = -1;
     vm->base_pointer = -1;
+}
+
+void vm_init_from_file(VirtualMachine* vm, char const* file)
+{
+    FILE* stream = fopen(file, "rb");
+    if (!stream) {
+        fprintf(stderr, "ERROR: cannot open file '%s': %s\n", file,
+            strerror(errno));
+        exit(1);
+    }
+
+    char header[6];
+    fread(header, 1, 6, stream);
+
+    if (strncmp(header, "PYRITE", 6) != 0) {
+        fprintf(
+            stderr, "ERROR: the file '%s' is not a valid pyrite file\n", file);
+        exit(1);
+    }
+
+    int32_t program_length = 0;
+    fread(&program_length, 1, sizeof(int32_t), stream);
+
+    if (program_length == 0) {
+        fprintf(stderr, "WARNING: input file is empty '%s'\n", file);
+        fclose(stream);
+        return;
+    }
+
+    uint8_t* program = malloc(1 * program_length);
+    fread(program, 1, program_length, stream);
+    fclose(stream);
+
+    vm_init(vm, program, program_length);
+}
+
+void vm_free(VirtualMachine* vm)
+{
+    free(vm->program);
 }
 
 void vm_execute(VirtualMachine* vm)

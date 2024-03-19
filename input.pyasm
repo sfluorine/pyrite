@@ -1,4 +1,6 @@
-ipush 34
-ipush 35
-iadd
+start:
+dpush 69.000
+dpush 0.420
+dadd
 print
+halt

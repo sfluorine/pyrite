@@ -5,3 +5,6 @@ build
 
 pyrite
 pyasm
+
+input.*
+output.*

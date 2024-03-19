@@ -49,4 +49,6 @@ typedef struct {
 } VirtualMachine;
 
 void vm_init(VirtualMachine* vm, uint8_t* program, uint32_t program_length);
+void vm_init_from_file(VirtualMachine* vm, const char* file);
+void vm_free(VirtualMachine* vm);
 void vm_execute(VirtualMachine* vm);
