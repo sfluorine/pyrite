@@ -46,6 +46,8 @@ typedef struct {
     Word stack[STACK_CAP];
     int32_t stack_pointer;
     int32_t base_pointer;
+
+    char** string_literals;
 } VirtualMachine;
 
 void vm_init(VirtualMachine* vm, uint8_t* program, uint32_t program_length);
