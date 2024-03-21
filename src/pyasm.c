@@ -117,10 +117,10 @@ static Label label_make(Span name, int32_t address)
 
 typedef struct {
     Span name;
-    Span data;
+    Token data;
 } DataLabel;
 
-static DataLabel data_label_make(Span name, Span data)
+static DataLabel data_label_make(Span name, Token data)
 {
     return (DataLabel) { .name = name, .data = data };
 }
@@ -413,8 +413,9 @@ static void assembler_init(Assembler* assembler, char const* input_file)
     fseek(stream, 0, SEEK_SET);
 
     if (size == 0) {
-        fprintf(stderr, "WARNING: input file is empty '%s'\n", input_file);
-        return;
+        fprintf(stderr, "WARNING: file '%s' is empty\n", input_file);
+        fprintf(stderr, "exiting now...\n");
+        exit(0);
     }
 
     assembler->source = malloc(sizeof(char) * size + 1);
@@ -451,11 +452,6 @@ static int32_t program_counter(Assembler* assembler)
 static void put_label(Assembler* assembler, Label label)
 {
     DYNARRAY_APPEND(&assembler->symbols, symbol_make_label(label));
-}
-
-static void put_data_label(Assembler* assembler, DataLabel data_label)
-{
-    DYNARRAY_APPEND(&assembler->symbols, symbol_make_data_label(data_label));
 }
 
 static int32_t lookup_label(Assembler* assembler, Span label)
@@ -542,7 +538,7 @@ static bool is_single_instruction(PyriteInstruction instruction)
     }
 }
 
-static void parse_instructions(Assembler* assembler)
+static void parse_instruction(Assembler* assembler)
 {
     Token current = current_token(assembler);
 
@@ -569,33 +565,109 @@ static void parse_instructions(Assembler* assembler)
         DYNARRAY_APPEND(&assembler->program, INS_IPUSH);
         advance_token(assembler);
 
-        Span integer_literal = current_token(assembler).as_span;
+        Token operand = current_token(assembler);
+        if (operand.kind == TOK_IDENTIFIER) {
+            advance_token(assembler);
+
+            int32_t index = lookup_label(assembler, operand.as_span);
+            if (index == -1) {
+                fprintf(stderr, "%s:%d: ERROR: no such symbol '%.*s'\n",
+                    assembler->input_file, operand.line, operand.as_span.length,
+                    operand.as_span.start);
+                exit(1);
+            }
+
+            Symbol symbol = assembler->symbols[index];
+            if (symbol.kind != SYMBOL_DATA_LABEL) {
+                fprintf(stderr,
+                    "%s:%d: ERROR: symbol '%.*s' is not a data label\n",
+                    assembler->input_file, operand.line, operand.as_span.length,
+                    operand.as_span.start);
+                exit(1);
+            }
+
+            Token data = symbol.as_data_label.data;
+            if (data.kind != TOK_INT_LITERAL) {
+                fprintf(stderr,
+                    "%s:%d: ERROR: symbol '%.*s' is not an integer literal\n",
+                    assembler->input_file, operand.line, operand.as_span.length,
+                    operand.as_span.start);
+                exit(1);
+            }
+
+            int64_t integer = strtoll(data.as_span.start, nullptr, 10);
+            uint8_t bytes[sizeof(int64_t)];
+            memcpy(bytes, &integer, sizeof(int64_t));
+
+            for (int32_t i = 0; i < (int32_t)sizeof(int64_t); i++)
+                DYNARRAY_APPEND(&assembler->program, bytes[i]);
+
+            break;
+        }
+
         match_token(assembler, TOK_INT_LITERAL);
 
-        int64_t integer = strtoll(integer_literal.start, nullptr, 10);
+        int64_t integer = strtoll(operand.as_span.start, nullptr, 10);
         uint8_t bytes[sizeof(int64_t)];
         memcpy(bytes, &integer, sizeof(int64_t));
 
         for (int32_t i = 0; i < (int32_t)sizeof(int64_t); i++)
             DYNARRAY_APPEND(&assembler->program, bytes[i]);
-        break;
-    }
+    } break;
     case INS_DPUSH: {
         DYNARRAY_APPEND(&assembler->program, INS_DPUSH);
         advance_token(assembler);
 
-        Span double_literal = current_token(assembler).as_span;
+        Token operand = current_token(assembler);
+        if (operand.kind == TOK_IDENTIFIER) {
+            advance_token(assembler);
+
+            int32_t index = lookup_label(assembler, operand.as_span);
+            if (index == -1) {
+                fprintf(stderr, "%s:%d: ERROR: no such symbol '%.*s'\n",
+                    assembler->input_file, operand.line, operand.as_span.length,
+                    operand.as_span.start);
+                exit(1);
+            }
+
+            Symbol symbol = assembler->symbols[index];
+            if (symbol.kind != SYMBOL_DATA_LABEL) {
+                fprintf(stderr,
+                    "%s:%d: ERROR: symbol '%.*s' is not a data label\n",
+                    assembler->input_file, operand.line, operand.as_span.length,
+                    operand.as_span.start);
+                exit(1);
+            }
+
+            Token data = symbol.as_data_label.data;
+            if (data.kind != TOK_DOUBLE_LITERAL) {
+                fprintf(stderr,
+                    "%s:%d: ERROR: symbol '%.*s' is not a double literal\n",
+                    assembler->input_file, operand.line, operand.as_span.length,
+                    operand.as_span.start);
+                exit(1);
+            }
+
+            double_t integer = strtod(data.as_span.start, nullptr);
+            uint8_t bytes[sizeof(double_t)];
+            memcpy(bytes, &integer, sizeof(double_t));
+
+            for (int32_t i = 0; i < (int32_t)sizeof(double_t); i++)
+                DYNARRAY_APPEND(&assembler->program, bytes[i]);
+
+            break;
+        }
+
         match_token(assembler, TOK_DOUBLE_LITERAL);
 
-        double_t dbl = strtod(double_literal.start, nullptr);
+        double_t dbl = strtod(operand.as_span.start, nullptr);
         uint8_t bytes[sizeof(double_t)];
 
         memcpy(bytes, &dbl, sizeof(double_t));
 
         for (int32_t i = 0; i < (int32_t)sizeof(double_t); i++)
             DYNARRAY_APPEND(&assembler->program, bytes[i]);
-        break;
-    }
+    } break;
     default:
         break;
     }
@@ -616,7 +688,9 @@ static void parse_readonly(Assembler* assembler)
             exit(1);
         }
 
-        put_data_label(assembler, data_label_make(name.as_span, data.as_span));
+        int32_t index = lookup_label(assembler, name.as_span);
+        assembler->symbols[index]
+            = symbol_make_data_label(data_label_make(name.as_span, data));
         advance_token(assembler);
     }
 }
@@ -625,7 +699,8 @@ static void parse_tokens(Assembler* assembler)
 {
     while (assembler->cursor < (int32_t)DYNARRAY_LENGTH(assembler->tokens)) {
         if (current_token(assembler).kind == TOK_LABEL) {
-            // the address will be patched in the second and third pass.
+            // this is an unknown label so it will be replaced soon by the
+            // corresponding segment.
             put_label(
                 assembler, label_make(current_token(assembler).as_span, -1));
         }
@@ -650,7 +725,7 @@ static void parse_tokens(Assembler* assembler)
             parse_readonly(assembler);
             continue;
         case SEGMENT_CODE:
-            parse_instructions(assembler);
+            parse_instruction(assembler);
             continue;
         case SEGMENT_UNKNOWN:
             fprintf(stderr, "%s:%d: ERROR: expected segment\n",

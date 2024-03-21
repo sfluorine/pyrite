@@ -1,10 +1,11 @@
 @segment readonly
-some_string: "Hello world!"
+a: 69.000
+b: 0.420
 
 @segment code
 start:
-dpush 69.000
-dpush 0.420
+dpush a
+dpush b
 dadd
 print
 halt
